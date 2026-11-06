@@ -166,31 +166,12 @@ main{padding:24px 18px calc(120px + env(safe-area-inset-bottom))}
 .category-delete-warning { color:#a94c46; background:#fff6f4; border:1px solid #f1ddd8; border-radius:11px; padding:11px 12px; font-size:11px; line-height:1.7; }
 .category-delete-actions { margin-top:13px; }
 
-
-/* Cloud sync badge and protected sign-in state */
-.sync-button{border:1px solid #dce5e1;background:#f7faf8;border-radius:99px;padding:6px 9px;display:flex;align-items:center;gap:6px;color:#526e66;font-weight:760;font-size:11px;white-space:nowrap;min-height:32px}
-.sync-button[data-state="ok"]{color:#1d7659;background:#eaf6ee;border-color:#cfebd9}
-.sync-button[data-state="busy"]{color:#8a6630;background:#fff6e8;border-color:#f3e3c8}
-.sync-button[data-state="warn"]{color:#aa694b;background:#fff4ec;border-color:#f2ddd0}
-.sync-dot{width:7px;height:7px;flex-shrink:0;border-radius:50%;background:#a8ada9}
-.sync-button[data-state="ok"] .sync-dot{background:#22966a}
-.sync-button[data-state="busy"] .sync-dot{background:#d59a37}
-.sync-button[data-state="warn"] .sync-dot{background:#c97b50}
-.cloud-screen{max-width:430px;margin:52px auto 20px;text-align:center;background:#fff;border:1px solid var(--line);border-radius:23px;padding:27px 21px;box-shadow:var(--shadow)}
-.cloud-screen h1{font-size:23px;letter-spacing:-.5px}
-.cloud-screen p{color:#70817d;font-size:12px;line-height:1.8;margin:10px 0 19px}
-.cloud-screen .button{min-width:165px}
-.cloud-facts{padding:11px 12px;background:#f3f8f5;border-radius:12px;color:#456d61;line-height:1.8;font-size:12px;margin:12px 0}
-.cloud-warning{padding:11px 12px;border:1px solid #f0ded0;background:#fff7f1;color:#9b6844;border-radius:11px;font-size:12px;line-height:1.7;margin:12px 0}
-.cloud-muted{font-size:11px;color:#82948d;line-height:1.7;margin-top:8px}
-.cloud-inline{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
-.cloud-actions{display:grid;gap:8px;margin-top:14px}.cloud-actions .button{width:100%}
-@media(max-width:425px){.head-inner{gap:5px}.head-buttons{gap:0}.logo{gap:7px}.logo small{display:none}.logo-mark{width:34px;height:34px}.logo strong{font-size:14px}.sync-button{padding:6px 7px;font-size:10px}.icon-button{width:34px;height:36px}}
-
 </style>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 </head>
 <body>
-<header class="header"><div class="layout head-inner"><div class="logo"><div class="logo-mark" aria-hidden="true" id="brandIcon"></div><div><strong id="brandTitle">Nancy <span style="color:#91afa7">×</span> Cher</strong><small>N&amp;C 生活分帳</small></div></div><div class="head-buttons"><button id="cloudStatusButton" type="button" class="sync-button" data-state="warn" data-act="cloud-settings" aria-label="查看雲端同步狀態"><span class="sync-dot"></span><span id="cloudStatusLabel">本機資料</span></button><button class="icon-button" type="button" data-act="members" aria-label="管理分帳成員" title="管理分帳成員" id="membersBtn"></button><button class="icon-button" type="button" data-act="settings" aria-label="資料設定及備份" title="設定" id="settingsBtn"></button></div></div></header>
+<header class="header"><div class="layout head-inner"><div class="logo"><div class="logo-mark" aria-hidden="true" id="brandIcon"></div><div><strong id="brandTitle">Nancy <span style="color:#91afa7">×</span> Cher</strong><small>N&amp;C 生活分帳</small></div></div><div class="head-buttons"><button class="icon-button" type="button" data-act="members" aria-label="管理分帳成員" title="管理分帳成員" id="membersBtn"></button><button class="icon-button" type="button" data-act="settings" aria-label="資料設定及備份" title="設定" id="settingsBtn"></button></div></div></header>
 <main id="app" class="layout" aria-live="polite"></main>
 <div class="bottom-wrap"><nav class="layout bottom" id="tabs" aria-label="全部明細、支出分類及結餘結帳"></nav></div>
 <dialog id="dlg" class="dialog"></dialog>
@@ -198,20 +179,7 @@ main{padding:24px 18px calc(120px + env(safe-area-inset-bottom))}
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 <script>
 'use strict';
-/* CLOUD CONFIG: Paste the Firebase web app config values here. Never put passwords in this file. */
-const FIREBASE_CONFIG = {
-  apiKey: "AIzaSyCawaNmqt42rbgcqmtDxsGYtZpLZrSlZ2k",
-  authDomain: "nc-billing-split.firebaseapp.com",
-  projectId: "nc-billing-split",
-  appId: "1:862488162524:web:f2805f6df64a877bf04419"
-};
-const CLOUD_LEDGER_ID = "nc-shared";
-const CLOUD_CONFIGURED = ["apiKey","authDomain","projectId","appId"].every(k=>
-  typeof FIREBASE_CONFIG[k]==='string' && FIREBASE_CONFIG[k].trim().length>3);
-window.NC_FIREBASE_CONFIG=FIREBASE_CONFIG;
-window.NC_CLOUD_CONFIGURED=CLOUD_CONFIGURED;
-
-const SEED={"schema":3,"people":[{"id":"nancy","name":"Nancy"},{"id":"cher","name":"Cher"}],"categories":[{"id":"accident","name":"車禍相關支出","shortName":"車禍支出","desc":"屆時由肇事者負擔","defaultShares":["nancy"],"builtin":true,"settlementMode":"direct"},{"id":"living","name":"生活支出","shortName":"生活支出","desc":"依分攤者均分，Nancy 應負擔額從收入款項扣除；付款人保留作為紀錄","defaultShares":["nancy","cher"],"builtin":true,"settlementMode":"advance","advanceHolder":"cher"}],"records":[],"settlements":[]};
+const SEED={"schema":3,"people":[{"id":"nancy","name":"Nancy"},{"id":"cher","name":"Cher"}],"categories":[{"id":"accident","name":"車禍相關支出","shortName":"車禍支出","desc":"屆時由肇事者負擔","defaultShares":["nancy"],"builtin":true,"settlementMode":"direct"},{"id":"living","name":"生活支出","shortName":"生活支出","desc":"依分攤者均分，Nancy 應負擔額從收入款項扣除；付款人保留作為紀錄","defaultShares":["nancy","cher"],"builtin":true,"settlementMode":"advance","advanceHolder":"cher"}],"records":[{"id":"blue001","date":"2026-09-24","title":"車禍衣物損毀：短褲、壓力褲、裡褲、鞋子、襪子","amount":3900,"receipt":"","note":"原購價不詳，按同類商品新品價格暫估；參最下面","category":"accident","payer":"nancy","shares":["nancy"]},{"id":"blue002","date":"2026-09-24","title":"車禍現場物品遺失：行動電源","amount":1000,"receipt":"","note":"原購價不詳，按同類商品新品價格暫估；參最下面","category":"accident","payer":"nancy","shares":["nancy"]},{"id":"blue003","date":"2026-09-24","title":"雙和急診室 替換尿布－安安成褲 L–XL","amount":299,"receipt":"EQ91296731","note":"7220刷","category":"accident","payer":"cher","shares":["nancy"]},{"id":"blue004","date":"2026-09-25","title":"雙和醫院急診醫療費","amount":1134,"receipt":"E1509250168","note":"7637刷","category":"accident","payer":"nancy","shares":["nancy"]},{"id":"blue005","date":"2026-09-25","title":"濕紙巾","amount":149,"receipt":"EU43201971","note":"7637刷","category":"accident","payer":"nancy","shares":["nancy"]},{"id":"blue006","date":"2026-09-26","title":"雙和陪護人員餐費","amount":150,"receipt":"EQ91103823","note":"","category":"accident","payer":"nancy","shares":["nancy"]},{"id":"blue007","date":"2026-09-27","title":"滅菌不織布紗布","amount":20,"receipt":"EQ91007546","note":"","category":"accident","payer":"nancy","shares":["nancy"]},{"id":"blue008","date":"2026-09-27","title":"雙和陪護人員餐費","amount":310,"receipt":"EQ91103889","note":"","category":"accident","payer":"nancy","shares":["nancy"]},{"id":"blue009","date":"2026-09-27","title":"蘆薈清潔泡沫 (乾洗身體) ","amount":380,"receipt":"ES08728181","note":"7637刷","category":"accident","payer":"nancy","shares":["nancy"]},{"id":"blue010","date":"2026-09-29","title":"雙和陪護人員餐費","amount":105,"receipt":"EQ91061875","note":"","category":"accident","payer":"nancy","shares":["nancy"]},{"id":"blue011","date":"2026-09-29","title":"雙和陪護人員餐費","amount":150,"receipt":"EQ91103962","note":"","category":"accident","payer":"nancy","shares":["nancy"]},{"id":"blue012","date":"2026-09-29","title":"雙和陪護人員餐費","amount":69,"receipt":"EQ91214982","note":"","category":"accident","payer":"nancy","shares":["nancy"]},{"id":"blue013","date":"2026-09-29","title":"75% 酒精棉＋擦澡套","amount":134,"receipt":"ES34355324","note":"7637刷","category":"accident","payer":"nancy","shares":["nancy"]},{"id":"blue014","date":"2026-09-29","title":"乾洗髮噴霧 2 入","amount":899,"receipt":"EQ29063148","note":"momo","category":"accident","payer":"nancy","shares":["nancy"]},{"id":"blue015","date":"2026-09-29","title":"骨盆 / 髖部外展支架 護具","amount":15000,"receipt":"EE34122038","note":"","category":"accident","payer":"nancy","shares":["nancy"]},{"id":"blue016","date":"2026-09-30","title":"雙和醫院證明書費 (骨科 CD) ","amount":3000,"receipt":"1509302146","note":"","category":"accident","payer":"nancy","shares":["nancy"]},{"id":"blue017","date":"2026-09-30","title":"雙和陪護人員餐費","amount":90,"receipt":"EQ91062394","note":"","category":"accident","payer":"nancy","shares":["nancy"]},{"id":"blue018","date":"2026-09-30","title":"雙和陪護人員餐費","amount":150,"receipt":"EQ91104175","note":"","category":"accident","payer":"nancy","shares":["nancy"]},{"id":"blue019","date":"2026-09-30","title":"臥床病人清潔照護－床上洗頭","amount":500,"receipt":"","note":"現金無發票","category":"accident","payer":"nancy","shares":["nancy"]},{"id":"blue020","date":"2026-09-30","title":"替換尿布－安安成褲 L–XL","amount":269,"receipt":"ES08728386","note":"現金","category":"accident","payer":"nancy","shares":["nancy"]},{"id":"blue021","date":"2026-09-30","title":"方巾＋除菌濕巾","amount":296,"receipt":"EU51733509","note":"7220刷","category":"accident","payer":"cher","shares":["nancy"]},{"id":"blue022","date":"2026-10-01","title":"雙和醫院住院醫療費 (9/25–10/1) ","amount":120522,"receipt":"11510010050","note":"7637刷","category":"accident","payer":"nancy","shares":["nancy"]},{"id":"blue023","date":"2026-10-02","title":"替換尿布－來復易紙尿褲 L ×2","amount":398,"receipt":"EU51734741","note":"7220刷","category":"accident","payer":"cher","shares":["nancy"]},{"id":"blue024","date":"2026-10-03","title":"替換尿布－棉柔 L ＋ Dr.P 紙尿褲 L–XL","amount":495,"receipt":"EU58888278","note":"7220刷","category":"accident","payer":"cher","shares":["nancy"]},{"id":"blue025","date":"2026-10-05","title":"爽身粉＋3M透氣膠帶＋Nexcare透氣膠帶＋紗布＋棉棒","amount":548,"receipt":"FQ19776257","note":"7220刷","category":"accident","payer":"cher","shares":["nancy"]},{"id":"blue026","date":"2026-10-06","title":"替換尿布－棉柔 L 成人紙尿褲 ×2 箱","amount":2770,"receipt":"EQ30298274","note":"momo","category":"accident","payer":"nancy","shares":["nancy"]},{"id":"blue027","date":"2026-10-07","title":"欣微素藥膏","amount":200,"receipt":"FR22951650","note":"現金","category":"accident","payer":"cher","shares":["nancy"]},{"id":"blue028","date":"2026-10-07","title":"濕紙巾","amount":149,"receipt":"EU58187478","note":"7220刷","category":"accident","payer":"cher","shares":["nancy"]},{"id":"blue029","date":"2026-10-13","title":"3M 低敏肌專用透氣膠帶 ×4","amount":860,"receipt":"FQ19777984","note":"7220刷","category":"accident","payer":"cher","shares":["nancy"]},{"id":"blue030","date":"2026-10-15","title":"仁康醫院費用 (出院) ","amount":45032,"receipt":"待補","note":"7637刷","category":"accident","payer":"nancy","shares":["nancy"]},{"id":"blue031","date":"2026-10-15","title":"副本費 ×5","amount":200,"receipt":"","note":"現金","category":"accident","payer":"cher","shares":["nancy"]},{"id":"blue032","date":"2026-10-15","title":"仁康醫院費用 (檢查費) ","amount":3000,"receipt":"待補","note":"7637刷","category":"accident","payer":"nancy","shares":["nancy"]},{"id":"blue033","date":"2026-10-15","title":"副本費 ×2","amount":200,"receipt":"","note":"現金","category":"accident","payer":"cher","shares":["nancy"]},{"id":"blue034","date":"2026-10-15","title":"仁康護理之家喘息照護費 (10/15–10/29) ","amount":5166,"receipt":"RCT202610141411011","note":"7637刷","category":"accident","payer":"nancy","shares":["nancy"]},{"id":"blue035","date":"2026-10-15","title":"99% 酒精棉 ×2 包＋濕紙巾 ×6 包","amount":436,"receipt":"EU72631623","note":"7637刷","category":"accident","payer":"nancy","shares":["nancy"]},{"id":"blue036","date":"2026-10-19","title":"替換尿布－棉柔 L 成人紙尿褲 ×2 箱","amount":2798,"receipt":"EQ32154702","note":"momo","category":"accident","payer":"nancy","shares":["nancy"]},{"id":"blue037","date":"2026-10-22","title":"雙和醫院骨科門診醫療費","amount":620,"receipt":"O1510223908","note":"7637刷","category":"accident","payer":"nancy","shares":["nancy"]},{"id":"blue038","date":"2026-10-26","title":"環境衛生用藥","amount":347,"receipt":"FR04556880","note":"4619刷","category":"accident","payer":"cher","shares":["nancy"]},{"id":"blue039","date":"2026-10-27","title":"看護墊","amount":99,"receipt":"EU94267445","note":"7637刷","category":"accident","payer":"nancy","shares":["nancy"]},{"id":"blue040","date":"2026-10-29","title":"仁康醫院門診醫療費 (10/16 看診) ","amount":190,"receipt":"O2026102900037","note":"10/29收款 現金","category":"accident","payer":"nancy","shares":["nancy"]},{"id":"blue041","date":"2026-10-29","title":"仁康醫院門診醫療費 (10/20 看診) ","amount":180,"receipt":"O2026102900038","note":"10/29收款 現金","category":"accident","payer":"nancy","shares":["nancy"]},{"id":"blue042","date":"2026-10-29","title":"仁康醫院門診醫療費 (10/27 看診) ","amount":180,"receipt":"O2026102900039","note":"10/29收款 現金","category":"accident","payer":"nancy","shares":["nancy"]},{"id":"blue043","date":"2026-10-29","title":"仁康護理之家看護墊 40×70 cm 共 10 片","amount":80,"receipt":"RCT202610291041571","note":"現金","category":"accident","payer":"nancy","shares":["nancy"]},{"id":"blue044","date":"2026-10-29","title":"雙和陪護人員餐費","amount":225,"receipt":"EF14325895","note":"現金","category":"accident","payer":"nancy","shares":["nancy"]},{"id":"blue045","date":"2026-10-29","title":"雙和醫院骨科門診醫療費","amount":640,"receipt":"O1510293894","note":"7637刷","category":"accident","payer":"nancy","shares":["nancy"]},{"id":"blue046","date":"2026-10-29","title":"患肢擺位支撐用品 (抱枕) ","amount":519,"receipt":"EQ40416158","note":"momo","category":"accident","payer":"nancy","shares":["nancy"]},{"id":"blue047","date":"2026-10-29","title":"浴坐輔助品 (無法站立，用於輔坐) ","amount":475,"receipt":"EQ40408184","note":"momo","category":"accident","payer":"nancy","shares":["nancy"]},{"id":"blue048","date":"2026-10-30","title":"換藥用品：棉棒、紗布、透氣膠帶、優碘","amount":655,"receipt":"FS84193548","note":"4619刷","category":"accident","payer":"cher","shares":["nancy"]},{"id":"blue049","date":"2026-10-30","title":"傷口防水保護除菌膜","amount":98,"receipt":"EV07536640","note":"7220刷","category":"accident","payer":"cher","shares":["nancy"]},{"id":"green001","date":"2026-10-15","title":"全聯泡麵 / 餅乾 / 菇菇 / 豆腐","amount":871,"receipt":"","note":"扣杯子毛巾","category":"living","payer":"nancy","shares":["nancy","cher"]},{"id":"green002","date":"2026-11-02","title":"Costco 買冷凍蔬菜","amount":2740,"receipt":"","note":"以 Nancy 已提供給 Cher 代管的 Costco 購物金支付；此筆消費由 Nancy、Cher 均攤。","category":"living","payer":"cher","shares":["nancy","cher"]},{"id":"green003","date":"2026-11-02","title":"全聯 菇菇 / 豆腐 / 肉","amount":758,"receipt":"","note":"","category":"living","payer":"cher","shares":["nancy","cher"]},{"id":"green004","date":"2026-11-02","title":"全聯 板豆腐 / 黃金豆腐","amount":120,"receipt":"","note":"","category":"living","payer":"cher","shares":["nancy","cher"]},{"id":"green005","date":"2026-11-05","title":"全聯 板豆腐 / 黃金豆腐","amount":960,"receipt":"","note":"","category":"living","payer":"cher","shares":["nancy","cher"]}],"settlements":[{"id":"red001","date":"2026-09-29","from":"nancy","to":"cher","amount":8600,"note":"紅包"},{"id":"red002","date":"2026-10-03","from":"nancy","to":"cher","amount":2000,"note":"紅包"},{"id":"red003","date":"2026-10-13","from":"nancy","to":"cher","amount":22000,"note":"紅包"},{"id":"red004","date":"2026-10-29","from":"nancy","to":"cher","amount":3000,"note":"姊提供 Costco 購物金"}]};
 const STORAGE='nancy_cher_ledger_v3';
 const LEGACY_V2='nancy_cher_ledger_v2';'nancy_cher_ledger_v2';
 const OLD_STORAGE='nancy-cher-split-ledger-v1';
@@ -311,7 +279,6 @@ function load(){
  return clone(SEED);
 }
 let db=load(),view='all',searchText='',payerFilter='all',dateSort='new',toastTimeout;
-let cloudAccessGranted=!CLOUD_CONFIGURED;
 db.categories.forEach(c=>{
  if(c.id==='living'){
   c.name='生活支出';c.shortName='生活支出';
@@ -354,68 +321,14 @@ function importOriginalBlueNotes(data) {
 }
 importOriginalBlueNotes(db);
 
-
-const SYNC_ARRAYS=['people','categories','records','settlements'];
-let savedSnapshot=clone(db);
-function sameValue(a,b){return JSON.stringify(a)===JSON.stringify(b)}
-function ledgerPatch(before,after){
- const changes=[];
- for(const key of SYNC_ARRAYS){
-  const a=new Map((before[key]||[]).map(x=>[x.id,x]));
-  const b=new Map((after[key]||[]).map(x=>[x.id,x]));
-  for(const id of new Set([...a.keys(),...b.keys()])){
-   if(!sameValue(a.get(id),b.get(id)))changes.push({key,id,value:b.has(id)?clone(b.get(id)):null});
-  }
- }
- return {changes,createdAt:new Date().toISOString()};
-}
-function applyLedgerPatch(base,patch){
- const next=clone(base);
- for(const {key,id,value} of patch.changes){
-  if(!SYNC_ARRAYS.includes(key)||!id)continue;
-  if(!Array.isArray(next[key]))next[key]=[];
-  const index=next[key].findIndex(row=>row.id===id);
-  if(value===null){if(index!==-1)next[key].splice(index,1)}
-  else if(index===-1)next[key].push(clone(value));
-  else next[key][index]=clone(value);
- }
- return next;
-}
-function localPersist(){
- try{localStorage.setItem(STORAGE,JSON.stringify(db));return true}
- catch(e){alert('本機備份寫入失敗，請盡快匯出 JSON 檔案。');return false}
-}
 function save(){
- const patch=ledgerPatch(savedSnapshot,db);
- savedSnapshot=clone(db);
- if(!localPersist())return;
- if(patch.changes.length && CLOUD_CONFIGURED && cloudAccessGranted && window.NCCloud?.ready()){
-  window.NCCloud.enqueue(patch);
- }
+ try{
+  localStorage.setItem(STORAGE,JSON.stringify(db));
+  if(window.dbRef) {
+      window.dbRef.set(db).catch(e => announce('雲端同步失敗: ' + e.message));
+  }
+ }catch(e){alert('資料無法儲存，請改用匯出備份保存')}
 }
-function receiveCloudState(data){
- if(!v3Valid(data))return;
- db=clone(data);savedSnapshot=clone(db);localPersist();
- if(view!=='all'&&view!=='summary'&&!db.categories.some(c=>c.id===view))view='all';
- render();
-}
-function cloudStatus(label,state='warn'){
- if(el('cloudStatusLabel'))el('cloudStatusLabel').textContent=label;
- if(el('cloudStatusButton'))el('cloudStatusButton').dataset.state=state;
-}
-function cloudUnlock(allowed){cloudAccessGranted=!!allowed;render()}
-function cloudPanelRefresh(){
- const dlg=el('dlg');
- if(dlg?.open&&dlg.dataset.panel==='cloud'){
-  dlg.close();cloudSettingsEditor();
- }
-}
-window.NCLedgerBridge={
- applyLedgerPatch,ledgerPatch,receiveCloudState,cloudUnlock,cloudStatus,cloudPanelRefresh,
- current:()=>clone(db),announce:(message)=>announce(message),localPersist,
- currentCount:()=>({records:db.records.length,settlements:db.settlements.length})
-};
-
 function announce(s){const t=el('toast');t.textContent=s;t.classList.add('show');clearTimeout(toastTimeout);toastTimeout=setTimeout(()=>t.classList.remove('show'),2500)}
 
 function compute(){
@@ -504,13 +417,7 @@ function bottomTabs(){
  const current=el('tabScroll').querySelector('.tab.active');
  if(current)requestAnimationFrame(()=>{const sc=el('tabScroll');if(sc)sc.scrollLeft=Math.max(0,current.offsetLeft-(sc.clientWidth-current.clientWidth)/2)});
 }
-function render(){
- if(CLOUD_CONFIGURED&&!cloudAccessGranted){
-  el('tabs').innerHTML='';
-  el('app').innerHTML=`<section class="cloud-screen"><div class="eyebrow">SHARED LEDGER</div><h1>登入共用帳本</h1><p>帳目將儲存在雲端，由已授權的成員共同編輯。請先登入以查看最新明細。</p><button class="button" type="button" data-act="cloud-settings">登入 / 查看同步狀態</button></section>`;
-  return;
- }
- bottomTabs();el('brandTitle').innerHTML=db.people.slice(0,2).map(p=>html(p.name)).join(' <span style="color:#91afa7">×</span> ')+(db.people.length>2?' <span style="font-size:11px;color:#7f9992">+'+(db.people.length-2)+'</span>':'');const p=el('app');if(view==='summary')renderSummary(p);else renderList(p);document.title='N&C 生活分帳'}
+function render(){bottomTabs();el('brandTitle').innerHTML=db.people.slice(0,2).map(p=>html(p.name)).join(' <span style="color:#91afa7">×</span> ')+(db.people.length>2?' <span style="font-size:11px;color:#7f9992">+'+(db.people.length-2)+'</span>':'');const p=el('app');if(view==='summary')renderSummary(p);else renderList(p);document.title='N&C 生活分帳'}
 function visibleRows(){
  return db.records.filter(r=>view==='all'||r.category===view)
  .filter(r=>payerFilter==='all'||r.payer===payerFilter)
@@ -566,7 +473,7 @@ function renderSummary(p){
  <div class="panel"><h2>每位成員的結餘</h2>${db.people.map(per=>{const bal=x.balances[per.id]||0;return `<div class="break-row"><div class="break-label">${html(per.name)}</div><div class="break-number ${bal>=0?'plus':'minus'}">${bal>0?'應收 ':bal<0?'應付 ':'已結清 '}${money(bal)}</div></div>`}).join('')}</div><div class="notice">車禍相關支出依實際付款人及分攤者結算；生活支出按分攤者均分，從 Nancy 已提供給 Cher 的款項扣除。生活支出的付款人保留供查帳，不另外抵扣還款。所有畫面金額四捨五入為整元，分攤額計算後再統一取整元，因此分類小計相加可能差 1 元。</div><p class="footer-note">收入可逐筆新增、修改或刪除。請定期匯出備份。</p></section>`;
 }
 function formFrame(title,contents){return `<div class="dialog-head"><h2>${html(title)}</h2><button class="dialog-close" type="button" data-act="close" aria-label="關閉">${ico('cross',19)}</button></div><div class="dialog-body">${contents}</div>`}
-function openDialog(content,title=''){const d=el('dlg');d.dataset.panel='';d.innerHTML=formFrame(title,content);d.showModal()}
+function openDialog(content,title=''){const d=el('dlg');d.innerHTML=formFrame(title,content);d.showModal()}
 function field(label,input,wide=false,tip=''){return `<div class="field ${wide?'wide':''}"><label>${html(label)}</label>${input}${tip?`<p class="help">${html(tip)}</p>`:''}</div>`}
 function prettyDate(v){const m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(String(v||''));return m?`${m[1]} / ${m[2]} / ${m[3]}`:'請選擇日期'}
 function dateInput(v){return `<div class="date-control"><span class="date-display" aria-hidden="true">${html(prettyDate(v))}</span><input class="date-native" name="date" type="date" required aria-label="日期" value="${html(v)}"></div>`}
@@ -583,7 +490,6 @@ function checkPeople(ids){return `<div class="checkbox-grid" id="sharesBox">${db
 
 function openRecord(id){
  const old=db.records.find(r=>r.id===id);
- const openedVersion=old?clone(old):null;
  const people=activePeople(),starter=people.find(p=>p.id==='cher')?.id||people[0]?.id||db.people[0]?.id;
  if(!starter){announce('請先新增分帳成員');return}
  const defaultCat=db.categories.find(c=>c.id===view)||db.categories[0];
@@ -617,12 +523,7 @@ function openRecord(id){
   const splits=f.getAll('share');if(!splits.length){announce('請至少勾選 1 位分攤者');return}
   const row={id:old?.id||uid(),date,title,amount,category:String(f.get('category')),payer:String(f.get('payer')),shares:splits,receipt:String(f.get('receipt')||'').trim(),note:String(f.get('note')||'').trim()};
   if(!person(row.payer)||!cat(row.category)){announce('請確認付款人與支出類型');return}
-  if(old){
-   const index=db.records.findIndex(x=>x.id===old.id);
-   if(index<0){announce('這筆支出已被其他成員刪除');return}
-   if(!sameValue(db.records[index],openedVersion)&&!confirm('其他成員剛修改了這筆支出，繼續儲存會覆蓋對方的內容。確定嗎？'))return;
-   db.records[index]=row;
-  }else db.records.push(row);
+  if(old){const index=db.records.findIndex(x=>x.id===old.id);if(index<0)return;db.records[index]=row}else db.records.push(row);
   save();el('dlg').close();render();announce(old?'已更新支出':'已新增支出');
  });
 }
@@ -698,7 +599,6 @@ function removePerson(id){const p=person(id);if(!p)return;if(p.active===false){p
 
 function paymentEditor(id){
  const old=db.settlements.find(x=>x.id===id),calc=compute();
- const openedVersion=old?clone(old):null;
  const suggestion=calc.transfers[0]||{from:db.people[1]?.id||db.people[0]?.id,to:db.people[0]?.id,amount:''};
  const r=old||{date:today(),from:suggestion.from,to:suggestion.to,amount:suggestion.amount||'',note:''};
  const form=`<form id="paymentForm" class="formgrid">${field('日期',dateInput(r.date))}${field('金額 (NT$)',`<input name="amount" type="number" inputmode="decimal" min="1" step="any" value="${html(Math.round(num(r.amount))||'')}" required>`)}${field('付款人',`<select name="from">${peopleOpts(r.from,'',true)}</select>`)}${field('收款人',`<select name="to">${peopleOpts(r.to,'',true)}</select>`)}${field('備註',`<textarea name="note" placeholder="例如：紅包、現金、轉帳">${html(r.note||'')}</textarea>`,true)}<p class="help" style="grid-column:1/-1">已完成的付款才記錄於此。原有紅包與購物金也屬於收入，可直接修改備註。收入金額以整元記錄；生活費均分尾數會在結算時一起四捨五入。</p><div class="actions" style="grid-column:1/-1">${old?`<button type="button" class="button danger" data-act="delete-payment" data-id="${html(old.id)}">刪除</button>`:`<button type="button" class="button ghost" data-act="close">取消</button>`}<button class="button" type="submit">儲存</button></div></form>`;
@@ -709,12 +609,7 @@ function paymentEditor(id){
   e.preventDefault();const v=new FormData(e.target),amount=Math.round(Number(v.get('amount'))),from=String(v.get('from')),to=String(v.get('to'));
   if(!(amount>0)||!Number.isFinite(amount)||from===to){announce('請確認付款人、收款人和有效金額');return}
   const row={id:old?.id||uid('pay'),date:String(v.get('date')),from,to,amount,note:String(v.get('note')||'').trim()};
-  if(old){
-   const latest=db.settlements.find(t=>t.id===old.id);
-   if(!latest){announce('這筆收入已被其他成員刪除');return}
-   if(!sameValue(latest,openedVersion)&&!confirm('其他成員剛修改了這筆收入，繼續儲存會覆蓋對方的內容。確定嗎？'))return;
-   db.settlements=db.settlements.map(t=>t.id===old.id?row:t);
-  }else db.settlements.push(row);
+  if(old)db.settlements=db.settlements.map(t=>t.id===old.id?row:t);else db.settlements.push(row);
   save();el('dlg').close();render();announce('已更新收入紀錄');
  });
 }
@@ -732,87 +627,10 @@ function csvExport(){
  announce('已下載全部支出與還款 CSV');
 }
 
-function exportJson(){
- download('N_C_分帳完整備份_'+today()+'.json',JSON.stringify(db,null,2),'application/json;charset=utf-8');
- announce('完整 JSON 備份已下載');
-}
-function settingsEditor(){
- openDialog(`<div class="cloud-facts">同步狀態：<b>${html(el('cloudStatusLabel').textContent)}</b></div>
- <div class="cloud-actions"><button type="button" class="button soft" data-act="cloud-settings">${ico('wallet',17)} 雲端同步 / 登入設定</button>
- <button class="button ghost" data-act="export-json" type="button">${ico('download')} 匯出完整 JSON 備份（可還原）</button>
- <button class="button ghost" data-act="export-csv" type="button">${ico('download')} 匯出全部明細 CSV</button>
- <button class="button ghost" data-act="import" type="button">${ico('upload')} 匯入 JSON 備份</button></div>
- <p class="cloud-muted">JSON 可保留完整成員、分類、支出及收入；CSV 只供檢視或試算表分析。請定期下載 JSON 以便還原。</p>`, '資料與備份');
-}
-function cloudSettingsEditor(){
- const cloud=window.NCCloud;
- const user=cloud?.user?.()||null;
- const created=cloud?.hasLedger?.()||false;
- const counts={records:db.records.length,settlements:db.settlements.length};
- let content='';
- if(!CLOUD_CONFIGURED){
-  content=`<div class="cloud-warning"><b>尚未設定 Firebase，現在只有本機儲存。</b>請先在 HTML 頂部的 FIREBASE_CONFIG 填入 Firebase 專案資料，並依照隨附的設定教學完成驗證與資料庫規則。</div>
-  <p class="help">GitHub Pages 只提供網站檔案，無法自行儲存多人共同修改的資料。設定雲端前，每個瀏覽器的資料仍是獨立的。</p>
-  <div class="cloud-actions"><button class="button ghost" type="button" data-act="export-json">${ico('download')} 先備份本機資料</button></div>`;
- }else if(!user){
-  content=`<p class="help">請使用管理員在 Firebase Authentication 建立的電子郵件與密碼登入。每位成員可使用自己的帳號，共用同一本帳。</p>
-  <form id="cloudLoginForm" style="display:grid;gap:12px;margin-top:16px">
-   <div class="field"><label>電子郵件</label><input name="email" type="email" autocomplete="username" required placeholder="name@example.com"></div>
-   <div class="field"><label>密碼</label><input name="password" type="password" autocomplete="current-password" required></div>
-   <button class="button" type="submit">登入共用帳本</button>
-  </form><div class="cloud-actions"><button type="button" class="button ghost" data-act="export-json">先下載此裝置的舊帳目 JSON 備份</button></div><p class="cloud-muted">僅限管理員已授權的帳號讀取與修改。密碼不會寫在 HTML 檔案內。</p>`;
- }else if(!created){
-  content=`<div class="cloud-facts">已登入：${html(user.email||'使用者')}<p>此裝置有 <b>${counts.records}</b> 筆支出、<b>${counts.settlements}</b> 筆收入。</p></div>
-  <div class="cloud-warning"><b>雲端帳本尚未建立。</b>請先在資料最完整的手機上開啟這個網站，確認明細正確後，再按下方按鈕。其他裝置之後會自動載入同一份資料。</div>
-  <div class="cloud-actions"><button type="button" class="button ghost" data-act="export-json">${ico('download')} 先備份本機帳目</button>
-  ${counts.records+counts.settlements>0?`<button type="button" class="button" data-act="cloud-create">建立共用帳本並上傳本機資料</button>`:`<div class="cloud-warning">這台裝置沒有舊帳目。請先在有完整紀錄的手機建立帳本，避免建立空白雲端資料。</div>`}
-  <button type="button" class="button ghost" data-act="cloud-logout">登出</button></div>`;
- }else{
-  const count=cloud?.queueCount?.()||0;
-  const detail=count?`尚有 ${count} 次異動待同步。請保持網路連線。`:'已建立共用帳本，所有授權裝置會取得更新。';
-  content=`<div class="cloud-facts">帳號：<b>${html(user.email||'已登入')}</b><p>雲端帳本：<b>nc-shared</b></p><p>狀態：<b>${html(el('cloudStatusLabel').textContent)}</b></p><p>${html(detail)}</p></div>
-  <div class="cloud-actions"><button type="button" class="button soft" data-act="cloud-retry">${ico('check',16)} 重新檢查並同步</button>
-  <button type="button" class="button ghost" data-act="export-json">${ico('download')} 匯出 JSON 備份</button>
-  ${cloud?.hasArchivedLocal?.()?`<button type="button" class="button ghost" data-act="cloud-backup">下載首次連線前的本機帳目</button>`:''}
-  <button type="button" class="button ghost" data-act="cloud-logout">登出此裝置</button></div>
-  <p class="cloud-muted">多人修改不同筆明細可合併；同時修改同一筆時，最後成功寫入雲端的版本會生效。請避免同時編輯同一筆。</p>`;
- }
- const dlg=el('dlg');
- if(dlg.open)dlg.close();
- openDialog(content, '共用雲端帳本');
- dlg.dataset.panel='cloud';
- const form=el('cloudLoginForm');
- if(form)form.addEventListener('submit',async(e)=>{
-  e.preventDefault();const button=form.querySelector('button[type="submit"]');
-  button.disabled=true;button.textContent='登入中…';
-  const fd=new FormData(form);
-  try{await cloud.login(String(fd.get('email')).trim(),String(fd.get('password')))}
-  catch(err){alert('登入失敗：'+(cloud?.friendlyError?.(err)||err.message));button.disabled=false;button.textContent='登入共用帳本'}
- });
-}
+function settingsEditor(){openDialog(`<div class="help" style="margin-bottom:16px">資料只保留在目前瀏覽器，請定期匯出 CSV 留存。CSV 可用試算表開啟，但無法直接匯入還原。</div><div style="display:grid;gap:10px"><button class="button ghost" data-act="export-csv" type="button">${ico('download')} 匯出全部支出與還款 (CSV)</button><button class="button ghost" data-act="import" type="button">${ico('upload')} 匯入 JSON 備份</button></div>`, '資料與備份')}
 
-document.addEventListener('click',async e=>{
- const b=e.target.closest('[data-act]');if(!b)return;
- if(b.dataset.act==='cloud-settings'){cloudSettingsEditor();return}
- if(b.dataset.act==='export-json'){exportJson();return}
- if(b.dataset.act==='cloud-backup'){window.NCCloud?.downloadArchived?.();return}
- if(b.dataset.act==='cloud-retry'){window.NCCloud?.retry?.();announce('已重新檢查同步狀態');return}
- if(b.dataset.act==='cloud-logout'){await window.NCCloud?.logout?.();return}
- if(b.dataset.act==='cloud-create'){
-  if(!window.NCCloud?.user?.()){announce('請先登入');return}
-  const n=db.records.length, pay=db.settlements.length;
-  if(!confirm(`準備以這台裝置建立「唯一」的雲端帳本。
-即將上傳 ${n} 筆支出與 ${pay} 筆收入。
 
-請確認這台裝置包含最新紀錄，並且已下載 JSON 備份。`))return;
-  b.disabled=true;b.textContent='正在建立…';
-  try{await window.NCCloud.create(clone(db));announce('雲端帳本建立成功')}
-  catch(err){alert('建立雲端帳本失敗：'+(window.NCCloud?.friendlyError?.(err)||err.message))}
-  finally{if(b.isConnected){b.disabled=false;b.textContent='建立共用帳本並上傳本機資料'}}
-  return;
- }
- if(CLOUD_CONFIGURED&&!cloudAccessGranted){announce('請先登入並讀取雲端帳本');cloudSettingsEditor();return}
- switch(b.dataset.act){case 'all':shiftView('all');break;case 'tab':shiftView(b.dataset.id);break;case 'add-record':openRecord();break;case 'edit-record':openRecord(b.dataset.id);break;case 'delete-record':removeRecord(b.dataset.id);break;case 'add-category':categoryEditor();break;case 'edit-category':categoryEditor(b.dataset.id);break;case 'delete-category':removeCategory(b.dataset.id);break;case 'delete-category-entire':removeCategoryEntire(b.dataset.id);break;case 'members':membersEditor();break;case 'rename-person':renamePerson(b.dataset.id);break;case 'delete-person':removePerson(b.dataset.id);break;case 'add-payment':paymentEditor();break;case 'edit-payment':paymentEditor(b.dataset.id);break;case 'delete-payment':removePayment(b.dataset.id);break;case 'settings':settingsEditor();break;case 'export-csv':csvExport();break;case 'import':el('importInput').click();break;case 'close':el('dlg').close();break;}});
+document.addEventListener('click',e=>{const b=e.target.closest('[data-act]');if(!b)return;switch(b.dataset.act){case 'all':shiftView('all');break;case 'tab':shiftView(b.dataset.id);break;case 'add-record':openRecord();break;case 'edit-record':openRecord(b.dataset.id);break;case 'delete-record':removeRecord(b.dataset.id);break;case 'add-category':categoryEditor();break;case 'edit-category':categoryEditor(b.dataset.id);break;case 'delete-category':removeCategory(b.dataset.id);break;case 'delete-category-entire':removeCategoryEntire(b.dataset.id);break;case 'members':membersEditor();break;case 'rename-person':renamePerson(b.dataset.id);break;case 'delete-person':removePerson(b.dataset.id);break;case 'add-payment':paymentEditor();break;case 'edit-payment':paymentEditor(b.dataset.id);break;case 'delete-payment':removePayment(b.dataset.id);break;case 'settings':settingsEditor();break;case 'export-csv':csvExport();break;case 'import':el('importInput').click();break;case 'close':el('dlg').close();break;}});
 
 el('importInput').addEventListener('change',async e=>{
  const file=e.target.files?.[0];if(!file)return;
@@ -824,188 +642,43 @@ el('importInput').addEventListener('change',async e=>{
   if(!data.records.every(r=>r.id&&Number.isFinite(Number(r.amount))&&num(r.amount)>0&&Array.isArray(r.shares)))throw new Error('支出資料不完整');
   if(!data.settlements.every(r=>r.id&&r.from&&r.to&&num(r.amount)>0))throw new Error('收入資料不完整');
   if(!confirm(`確定匯入 ${data.records.length} 筆支出與 ${data.settlements.length} 筆收入？將覆蓋目前帳本。`))return;
-  if(CLOUD_CONFIGURED&&window.NCCloud?.hasLedger?.()&&!confirm('這會更新共用雲端帳本，並可能取代其他成員的支出或收入。確定繼續嗎？'))return;
-   db=clone(data);importOriginalBlueNotes(db);save();el('dlg').close();shiftView('accident');announce(CLOUD_CONFIGURED&&window.NCCloud?.hasLedger?.()?'已匯入，雲端同步中':'備份已匯入本機');
+  db=clone(data);importOriginalBlueNotes(db);save();el('dlg').close();shiftView('accident');announce('備份匯入成功');
  }catch(err){alert('匯入失敗：'+err.message)}finally{e.target.value=''}
 });
 el('brandIcon').innerHTML=ico('book',21);el('membersBtn').innerHTML=ico('users',20);el('settingsBtn').innerHTML=ico('cog',19);
-cloudStatus(CLOUD_CONFIGURED?'等待登入':'僅存本機','warn');
 render();
-</script>
 
-<script type="module">
-// Firebase is intentionally not loaded until the owner supplies their own project settings.
-if(window.NC_CLOUD_CONFIGURED){
- const B=window.NCLedgerBridge;
- const config=window.NC_FIREBASE_CONFIG;
- const SDK='https://www.gstatic.com/firebasejs/13.2.0/';
- try{
-  B.cloudStatus('連線中','busy');
-  const [appApi,authApi,fireApi]=await Promise.all([
-   import(SDK+'firebase-app.js'),import(SDK+'firebase-auth.js'),import(SDK+'firebase-firestore.js')
-  ]);
-  const app=appApi.initializeApp(config);
-  const auth=authApi.getAuth(app);
-  const fireDB=fireApi.getFirestore(app);
-  const sharedDoc=fireApi.doc(fireDB,'ledgers','nc-shared');
-  let signedIn=null,unsubscribe=null,exists=false,ready=false,remote=null,remoteRevision=-1;
-  let queue=[],sending=false,lastError='',retryTimer=null;
-  let queueKey='',localArchived=false;
-  let lastStatus='';
-  const validate=v=>v&&v.schema===3&&['people','categories','records','settlements'].every(k=>Array.isArray(v[k]));
-  function report(label,state='warn'){
-   const key=label+'|'+state;
-   B.cloudStatus(label,state);
-   if(key!==lastStatus){lastStatus=key;B.cloudPanelRefresh()}
+// --- 新增：Firebase 雲端同步設定 ---
+const firebaseConfig = {
+  apiKey: "AIzaSyCawaNmqt42rbgcqmtDxsGYtZpLZrSlZ2k",
+  authDomain: "nc-billing-split.firebaseapp.com",
+  databaseURL: "https://nc-billing-split-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "nc-billing-split",
+  storageBucket: "nc-billing-split.firebasestorage.app",
+  messagingSenderId: "862488162524",
+  appId: "1:862488162524:web:f2805f6df64a877bf04419",
+  measurementId: "G-WWJXWF3FM1"
+};
+
+try {
+  if (firebaseConfig.apiKey !== "請填入_API_KEY") {
+    firebase.initializeApp(firebaseConfig);
+    window.dbRef = firebase.database().ref('ledgerData');
+
+    // 監聽雲端資料變動 (其他人修改時自動更新畫面)
+    window.dbRef.on('value', (snapshot) => {
+      const cloudData = snapshot.val();
+      if (cloudData) {
+        db = cloudData;
+        localStorage.setItem(STORAGE, JSON.stringify(db)); // 備份到本地
+        render();
+      }
+    });
+  } else {
+    console.warn("未設定 Firebase 參數，目前以單機版 LocalStorage 模式運行。請參考說明完成 Firebase 設定以啟用雲端同步。");
   }
-  function setQueue(){try{localStorage.setItem(queueKey,JSON.stringify(queue))}catch(e){console.error('pending queue could not be saved',e)}}
-  function archiveLegacy(){
-   if(localArchived)return;
-   localArchived=true;
-   try{
-    const archiveKey='nc_legacy_before_cloud_'+config.projectId;
-    if(!localStorage.getItem(archiveKey))localStorage.setItem(archiveKey,JSON.stringify(B.current()));
-   }catch(e){console.warn('legacy backup could not be saved',e)}
-  }
-  function rebase(){
-   if(!remote||!ready)return;
-   let next=structuredClone(remote);
-   for(const patch of queue)next=B.applyLedgerPatch(next,patch);
-   B.receiveCloudState(next);
-  }
-  function renderStatus(){
-   if(!signedIn){report('請先登入','warn');return}
-   if(!ready){report(exists?'讀取中':'待建立雲端','busy');return}
-   if(lastError){report('同步失敗','warn');return}
-   if(queue.length){report('待同步 '+queue.length,'busy');return}
-   report('已同步','ok');
-  }
-  function stopListening(){if(unsubscribe){unsubscribe();unsubscribe=null}}
-  async function flush(){
-   if(sending||!signedIn||!ready||!queue.length)return;
-   sending=true;lastError='';report('同步中','busy');
-   try{
-    while(queue.length&&signedIn&&ready){
-     const patch=queue[0];
-     const result=await fireApi.runTransaction(fireDB,async transaction=>{
-      const snap=await transaction.get(sharedDoc);
-      if(!snap.exists())throw Error('雲端帳本已被移除，已停止寫入');
-      const record=snap.data();
-      if(!validate(record.payload))throw Error('雲端帳本格式不正確');
-      const combined=B.applyLedgerPatch(record.payload,patch);
-      const revision=Number(record.revision||0)+1;
-      transaction.update(sharedDoc,{payload:combined,revision,updatedAt:fireApi.serverTimestamp()});
-      return {combined,revision};
-     });
-     queue.shift();setQueue();
-     if(result.revision>=remoteRevision){remote=result.combined;remoteRevision=result.revision}
-     rebase();
-    }
-   }catch(err){lastError=err.message||String(err);console.error('cloud sync error',err)}
-   finally{sending=false;renderStatus()}
-  }
-  async function createCloud(local){
-   if(!signedIn)throw Error('請先登入');
-   if(!validate(local))throw Error('本機帳本格式不正確');
-   await fireApi.runTransaction(fireDB,async transaction=>{
-    const snap=await transaction.get(sharedDoc);
-    if(snap.exists())throw Error('雲端帳本已存在；請重新整理並使用現有的雲端資料');
-    transaction.set(sharedDoc,{schema:3,payload:local,revision:1,createdAt:fireApi.serverTimestamp(),updatedAt:fireApi.serverTimestamp()});
-   });
-  }
-  function startListener(){
-   stopListening();ready=false;exists=false;remote=null;remoteRevision=-1;
-   lastError='';B.cloudUnlock(false);report('讀取雲端','busy');
-   unsubscribe=fireApi.onSnapshot(sharedDoc,{includeMetadataChanges:true},snap=>{
-    if(!signedIn)return;
-    if(!snap.exists()){
-     ready=false;exists=false;remote=null;
-     B.cloudUnlock(true);
-     report('待建立雲端','busy');
-     return;
-    }
-    const data=snap.data();
-    if(!validate(data.payload)){
-     lastError='雲端帳本格式不正確';ready=false;B.cloudUnlock(false);report('資料錯誤','warn');return;
-    }
-    const revision=Number(data.revision||0);
-    if(revision<remoteRevision)return;
-    archiveLegacy();
-    remoteRevision=revision;remote=structuredClone(data.payload);
-    exists=true;ready=true;lastError='';
-    if(!B.current||!queueKey)return;
-    if(!window.NC_CLOUD_ONCE_UNLOCKED){
-     window.NC_CLOUD_ONCE_UNLOCKED=true;
-     B.cloudUnlock(true);
-    }
-    rebase();renderStatus();
-    if(queue.length)void flush();
-   },err=>{
-    lastError=err.message||String(err);ready=false;
-    B.cloudUnlock(false);report(err.code==='permission-denied'?'無存取權限':'連線失敗','warn');
-    console.error('firestore listener',err);
-   });
-  }
-  const archiveKey='nc_legacy_before_cloud_'+config.projectId;
-  const hasArchivedLocal=()=>{try{return !!localStorage.getItem(archiveKey)}catch(e){return false}};
-  function downloadArchived(){
-   const raw=localStorage.getItem(archiveKey);
-   if(!raw){B.announce('沒有找到首次連線前的本機備份');return}
-   const blob=new Blob([raw],{type:'application/json;charset=utf-8'});
-   const url=URL.createObjectURL(blob);const a=document.createElement('a');
-   a.href=url;a.download='N_C_首次雲端連線前備份.json';a.click();
-   setTimeout(()=>URL.revokeObjectURL(url),1400);
-  }
-  const friendlyError=err=>{
-   const code=err?.code||'';
-   const errors={
-    'auth/invalid-credential':'帳號或密碼錯誤，請確認 Firebase Authentication 使用者設定。',
-    'auth/invalid-email':'電子郵件格式錯誤。',
-    'auth/too-many-requests':'登入失敗次數過多，請稍後再試。',
-    'auth/network-request-failed':'網路連線失敗，請確認網路。',
-    'permission-denied':'Firestore 拒絕存取，請確認安全規則已加入此帳號的 UID。',
-    'unavailable':'雲端目前不可用，修改會保留在本機待同步。'
-   };
-   return errors[code]||err?.message||String(err);
-  };
-  window.NCCloud={
-   user:()=>signedIn?{email:signedIn.email,uid:signedIn.uid}:null,
-   hasLedger:()=>exists,ready:()=>ready,queueCount:()=>queue.length,
-   friendlyError,hasArchivedLocal,downloadArchived,
-   login:(email,password)=>authApi.signInWithEmailAndPassword(auth,email,password),
-   logout:async()=>{
-    if(queue.length&&!confirm('仍有 '+queue.length+' 次修改尚未同步，登出後會保留在這個裝置待下次登入。確定登出？'))return;
-    await authApi.signOut(auth);
-   },
-   create:createCloud,
-   retry:()=>{lastError='';if(!ready&&signedIn){startListener()}else{renderStatus();if(queue.length)void flush()}},
-   enqueue:patch=>{
-    if(!ready||!signedIn)return;
-    if(!patch?.changes?.length)return;
-    queue.push(patch);setQueue();renderStatus();void flush();
-   }
-  };
-  authApi.onAuthStateChanged(auth,user=>{
-   stopListening();signedIn=user;ready=false;exists=false;remote=null;remoteRevision=-1;
-   window.NC_CLOUD_ONCE_UNLOCKED=false;
-   if(!user){queue=[];queueKey='';B.cloudUnlock(false);report('請先登入','warn');return}
-   queueKey='nc_pending_'+config.projectId+'_'+user.uid;
-   try{
-    const raw=localStorage.getItem(queueKey);
-    queue=raw?JSON.parse(raw):[];
-    if(!Array.isArray(queue))queue=[];
-   }catch(e){queue=[]}
-   startListener();
-  });
-  window.addEventListener('online',()=>{if(ready&&queue.length)void flush()});
-  document.addEventListener('visibilitychange',()=>{
-   if(document.visibilityState==='visible'&&ready&&queue.length)void flush();
-  });
- }catch(err){
-  console.error('Firebase failed to initialize',err);
-  B.cloudStatus('設定錯誤','warn');B.cloudUnlock(false);
-  window.NCCloud={friendlyError:(x)=>x?.message||String(x),user:()=>null,ready:()=>false,hasLedger:()=>false};
- }
+} catch(e) {
+  console.error("Firebase 初始化失敗", e);
 }
 </script>
 </body>
