@@ -169,7 +169,11 @@ main{padding:24px 18px calc(120px + env(safe-area-inset-bottom))}
 </style>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 </head>
+
 <body>
 <header class="header"><div class="layout head-inner"><div class="logo"><div class="logo-mark" aria-hidden="true" id="brandIcon"></div><div><strong id="brandTitle">Nancy <span style="color:#91afa7">×</span> Cher</strong><small>N&amp;C 生活分帳</small></div></div><div class="head-buttons"><button class="icon-button" type="button" data-act="members" aria-label="管理分帳成員" title="管理分帳成員" id="membersBtn"></button><button class="icon-button" type="button" data-act="settings" aria-label="資料設定及備份" title="設定" id="settingsBtn"></button></div></div></header>
 <main id="app" class="layout" aria-live="polite"></main>
@@ -321,14 +325,18 @@ function importOriginalBlueNotes(data) {
 }
 importOriginalBlueNotes(db);
 
+// --- MODIFIED SAVE FUNCTION ---
 function save(){
- try{
-  localStorage.setItem(STORAGE,JSON.stringify(db));
-  if(window.dbRef) {
-      window.dbRef.set(db).catch(e => announce('雲端同步失敗: ' + e.message));
+  try{
+    localStorage.setItem(STORAGE,JSON.stringify(db));
+    if(window.dbRef) {
+        window.dbRef.set(db).catch(e => announce('雲端同步失敗: ' + e.message));
+    }
+  }catch(e){
+    alert('資料無法儲存，請改用匯出備份保存')
   }
- }catch(e){alert('資料無法儲存，請改用匯出備份保存')}
 }
+
 function announce(s){const t=el('toast');t.textContent=s;t.classList.add('show');clearTimeout(toastTimeout);toastTimeout=setTimeout(()=>t.classList.remove('show'),2500)}
 
 function compute(){
@@ -680,6 +688,38 @@ try {
 } catch(e) {
   console.error("Firebase 初始化失敗", e);
 }
+
+// --- 新增：Firebase 雲端同步設定 ---
+const firebaseConfig = {
+  apiKey: "AIzaSyCawaNmqt42rbgcqmtDxsGYtZpLZrSlZ2k",
+  authDomain: "nc-billing-split.firebaseapp.com",
+  databaseURL: "https://nc-billing-split-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "nc-billing-split",
+  storageBucket: "nc-billing-split.firebasestorage.app",
+  messagingSenderId: "862488162524",
+  appId: "1:862488162524:web:f2805f6df64a877bf04419",
+  measurementId: "G-WWJXWF3FM1"
+};
+
+try {
+  firebase.initializeApp(firebaseConfig);
+  window.dbRef = firebase.database().ref('ledgerData');
+
+  // 監聽雲端資料變動 (其他人修改時自動更新畫面)
+  window.dbRef.on('value', (snapshot) => {
+    const cloudData = snapshot.val();
+    if (cloudData) {
+      // 確保從雲端拿到的資料覆蓋本地資料
+      db = cloudData;
+      importOriginalBlueNotes(db); // 防呆機制
+      localStorage.setItem(STORAGE, JSON.stringify(db));
+      render();
+    }
+  });
+} catch(e) {
+  console.error("Firebase 初始化失敗", e);
+}
 </script>
 </body>
 </html>
+
